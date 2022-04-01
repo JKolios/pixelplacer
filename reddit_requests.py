@@ -9,6 +9,9 @@ session = requests.Session()
 session.mount('https://www.reddit.com', HTTPAdapter(max_retries=5))
 session.headers['Origin'] = "https://hot-potato.reddit.com"
 
+class RedditRequestError(Exception):
+    pass
+
 
 def init_reddit_session(username, password, client_id, client_secret):
 
@@ -26,7 +29,7 @@ def init_reddit_session(username, password, client_id, client_secret):
             break
         else:
             print("ERROR: ", request, request.text)
-            time.sleep(5)
+            time.sleep(10)
     session.headers['Authorization'] = "bearer {}".format(data["access_token"])
 
 
@@ -70,19 +73,30 @@ def set_color(ax, ay, new_color):
                          'query': 'mutation setPixel($input: ActInput!) {\n  act(input: $input) {\n    data {\n      ... on BasicMessage {\n        id\n        data {\n          ... on GetUserCooldownResponseMessageData {\n            nextAvailablePixelTimestamp\n            __typename\n          }\n          ... on SetPixelResponseMessageData {\n            timestamp\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n',
                      })
 
+    if not r.ok:
+        # Assuming for now that all non-200 status codes are caused by
+        # token expirations
+        raise RedditRequestError
+
     data = addict.Dict(r.json())
     print("Set color request response: ", data)
     if "errors" not in data:
         print("Placed color.")
-        return {"success": True, "ts": time.time()}
+        next_timestamp = int(
+            data.data.act.data[0].data.nextAvailablePixelTimestamp / 1000) + 1
+        print("Next attempt at ts:{}".format(next_timestamp))
+        print("Ts in wall clock time UTC:{}".format(
+            datetime.datetime.utcfromtimestamp(next_timestamp).strftime('%Y-%m-%d %H:%M:%S')))
+        return {"success": True, "ts": next_timestamp}
     elif data.errors[0].message == 'Ratelimited':
-        next_timestamp = int(data.errors[0].extensions.nextAvailablePixelTs / 1000) + 1
+        next_timestamp = int(
+            data.errors[0].extensions.nextAvailablePixelTs / 1000) + 1
         print("Rate limited, next allowed ts:{}".format(next_timestamp))
         print("Ts in wall clock time UTC:{}".format(
             datetime.datetime.utcfromtimestamp(next_timestamp).strftime('%Y-%m-%d %H:%M:%S')))
         return {"success": False, "ts": next_timestamp}
     else:
-        next_timestamp = time.time()+ 30
+        next_timestamp = time.time() + 30
         print("Unknown error, retrying at ts:{}".format(next_timestamp))
         print("Ts in wall clock time UTC:{}".format(
             datetime.datetime.utcfromtimestamp(next_timestamp).strftime('%Y-%m-%d %H:%M:%S')))

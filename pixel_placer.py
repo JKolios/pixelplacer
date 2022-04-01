@@ -19,14 +19,12 @@ def place_pixel(ax, ay, new_color):
 
     print("Placing color #{} at {} {}".format(new_color, ax, ay))
     place_pixel_result = reddit_requests.set_color(ax, ay, new_color)
-    if not place_pixel_result["success"]:
-        sleep_for = place_pixel_result["ts"] - time.time() + 1
-        print("Will sleep for {} seconds".format(sleep_for))
-        try:
-            time.sleep(sleep_for)
-        except ValueError:
-            print("Next timestamp was in the past, continuing")
-        place_pixel(ax, ay, new_color)
+    sleep_for = place_pixel_result["ts"] - time.time() + 1
+    print("Will sleep for {} seconds".format(sleep_for))
+    try:
+        time.sleep(sleep_for)
+    except ValueError:
+        print("Next timestamp was in the past, continuing")
 
 
 def main():
@@ -54,7 +52,12 @@ def main():
                     ax = xx[0] + int(origin_x)
                     ay = xx[1] + int(origin_y)
 
-                    place_pixel(ax, ay, pal)
+                    try:
+                        place_pixel(ax, ay, pal)
+                    except reddit_requests.RedditRequestError:
+                        print("Caught reddit request error, reauthenticating")
+                        reddit_requests.init_reddit_session(
+                            username, password, client_id, client_secret)
                     checked += 1
         message = "All pixels placed, sleeping {}s..."
         waitTime = 60
