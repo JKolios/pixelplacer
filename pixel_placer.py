@@ -9,14 +9,6 @@ import utils
 
 
 def place_pixel(ax, ay, new_color):
-    # message = "Probing absolute pixel {},{}".format(ax, ay)
-    # print(message)
-    # old_color = reddit_requests.get_current_color(ax, ay)
-    # if old_color == new_color:
-    #     print("Color already set")
-    #     time.sleep(.25)
-    #     return
-
     print("Placing color #{} at {} {}".format(new_color, ax, ay))
     place_pixel_result = reddit_requests.set_color(ax, ay, new_color)
     sleep_for = place_pixel_result["ts"] - time.time() + 1
@@ -28,8 +20,11 @@ def place_pixel(ax, ay, new_color):
 
 
 def main():
-    _, img_path, origin_x, origin_y, username, password, client_id, client_secret = sys.argv
+    _, img_path, origin_x, origin_y, username, password, client_id, client_secret, other_bot_usernames = sys.argv
     img = Image.open(img_path)
+    bot_usernames = [username]
+    bot_usernames.extend(other_bot_usernames.split(','))
+    print("Bot username list: {}".format(bot_usernames))
 
     reddit_requests.init_reddit_session(
         username, password, client_id, client_secret)
@@ -46,14 +41,23 @@ def main():
                 pixel = img.getpixel((xx[0], xx[1]))
 
                 if pixel[3] > 0:
-                    pal = closest_colors.find_palette(
+                    new_color = closest_colors.find_palette(
                         (pixel[0], pixel[1], pixel[2]))
 
                     ax = xx[0] + int(origin_x)
                     ay = xx[1] + int(origin_y)
 
                     try:
-                        place_pixel(ax, ay, pal)
+                        message = "Getting user who last modified pixel {},{}".format(
+                            ax, ay)
+                        print(message)
+                        last_modified_user = reddit_requests.get_last_modified_user(
+                            ax, ay)
+                        if last_modified_user in bot_usernames:
+                            print("Color already set by one of our bots")
+                            time.sleep(.25)
+                            continue
+                        place_pixel(ax, ay, new_color)
                     except reddit_requests.RedditRequestError:
                         print("Caught reddit request error, reauthenticating")
                         reddit_requests.init_reddit_session(
