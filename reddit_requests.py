@@ -35,6 +35,11 @@ def init_reddit_session(username, password, client_id, client_secret):
 
 
 def get_last_modified_user(ax, ay):
+    canvIndex = 0
+    if ax >= 1000:
+        ax = ax % 1000
+        canvIndex = 1
+
     r = session.post("https://gql-realtime-2.reddit.com/query",
                      json={
                          'operationName': 'pixelHistory',
@@ -47,7 +52,7 @@ def get_last_modified_user(ax, ay):
                                          'y': ay,
                                      },
                                      'colorIndex': 0,
-                                     'canvasIndex': 0,
+                                     'canvasIndex': canvIndex,
                                  },
                              },
                          },
@@ -73,6 +78,11 @@ def get_last_modified_user(ax, ay):
 
 
 def set_color(ax, ay, new_color):
+    canvIndex = 0
+    if ax >= 1000:
+        ax = ax % 1000
+        canvIndex = 1
+        
     r = session.post("https://gql-realtime-2.reddit.com/query",
                      json={
                          'operationName': 'setPixel',
@@ -85,7 +95,7 @@ def set_color(ax, ay, new_color):
                                          'y': ay,
                                      },
                                      'colorIndex': new_color,
-                                     'canvasIndex': 0,
+                                     'canvasIndex': canvIndex,
                                  },
                              },
                          },
