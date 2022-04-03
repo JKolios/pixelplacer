@@ -1,7 +1,6 @@
 from ast import Str
 import time
 import datetime
-from tkinter.messagebox import NO
 from typing import Dict
 
 import requests
@@ -11,12 +10,14 @@ import addict
 import utils
 import closest_colors
 
+
 class RedditRequestError(Exception):
     def __init__(self, status_code, response_text, message="Reddit Request Error"):
         self.message = message
         self.status_code = status_code
         self.response_text = response_text
         super().__init__(self.message)
+
 
 class RedditAuthError(RedditRequestError):
     def __init__(self, status_code, response_text, message="Reddit Authentication Error"):
@@ -45,7 +46,8 @@ class Bot(object):
                 self._loop_iteration()
             except RedditRequestError as e:
                 print("Caught reddit request error")
-                print("Code: {}, response:{}".format(e.status_code, e.response_text))
+                print("Code: {}, response:{}".format(
+                    e.status_code, e.response_text))
                 print("Trying reauth")
                 self._auth_loop()
 
@@ -54,7 +56,8 @@ class Bot(object):
             self._init_reddit_session()
         except RedditAuthError as e:
             print("Caught reddit request error")
-            print("Code: {}, response:{}".format(e.status_code, e.response_text))
+            print("Code: {}, response:{}".format(
+                e.status_code, e.response_text))
             print("Trying reauth")
             self._sleep_for(15, "auth request fallback")
             self._auth_loop()
@@ -73,7 +76,7 @@ class Bot(object):
                 if pixel[3] == 0:
                     print("Transparent pixel, ignoring.")
                     continue
-                
+
                 new_color = closest_colors.find_palette(
                     (pixel[0], pixel[1], pixel[2]))
 
@@ -86,7 +89,8 @@ class Bot(object):
                 last_modified_user = self._get_last_modified_user(
                     ax, ay)
                 if last_modified_user in self.bot_usernames:
-                    self._sleep_for(.25, "Color already set by one of our bots")
+                    self._sleep_for(.25,
+                                    "Color already set by one of our bots")
                     continue
 
                 set_color_result = self._set_color(ax, ay, new_color)
@@ -110,7 +114,7 @@ class Bot(object):
             self.session.headers['Authorization'] = "bearer {}".format(
                 data["access_token"])
         else:
-           raise RedditAuthError(request.status_code, request.text)
+            raise RedditAuthError(request.status_code, request.text)
 
     def _get_last_modified_user(self, ax, ay) -> Str:
         canvIndex = 0
